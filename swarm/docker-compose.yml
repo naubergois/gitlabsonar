@@ -1,0 +1,60 @@
+version: '3.3'
+
+networks:
+  prodnetwork:
+    external:
+      name: bridge
+
+services:
+  gitlab-ce:
+    hostname: gitlab-ce
+
+    image: gitlab/gitlab-ce:latest
+    environment:
+       GITLAB_OMNIBUS_CONFIG: |
+         gitlab_rails['gitlab_shell_ssh_port'] = 32222
+    ports:
+      - "443:443"
+      - "80:80"
+      - "32222:22"
+    volumes:
+      - /opt/gitlab/config:/etc/gitlab
+      - /opt/gitlab/logs:/var/log/gitlab
+      - /opt/gitlab/data:/var/opt/gitlab
+    networks:
+      - prodnetwork
+    deploy:
+      placement:
+        constraints: [node.labels.gitlab == master]
+  sonar:
+    hostname: sonar
+    image: sonarqube:8.9.7-community
+    ports:
+      - "30900:9000"
+    networks:
+      - prodnetwork
+  nexus:
+    hostname: nexus
+    image: sonatype/nexus3
+    ports:
+      - "30081:8081"
+    networks:
+      - prodnetwork
+  vault:
+    hostname: vault
+    image: vault
+    networks:
+      - prodnetwork
+
+  gitlab-runner:
+    hostname: runner
+    image: bitnami/gitlab-runner:latest
+    #image: gitlab/gitlab-runner:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    #  - /opt/gitlab-runner-config:/etc/gitlab-runner
+    networks:
+      - prodnetwork
+    deploy:
+      placement:
+        constraints: [node.hostname == runner ]
